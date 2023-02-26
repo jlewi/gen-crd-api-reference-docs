@@ -695,6 +695,22 @@ func render(w io.Writer, pkgs []*apiPackage, config generatorConfig) error {
 		gitCommit, _ = exec.Command("git", "rev-parse", "--short", "HEAD").Output()
 	}
 
+	for _, pkg := range pkgs {
+		klog.Info("rendering package ", pkg.identifier())
+
+		for _, pkgType := range pkg.Types {
+			name := strings.Replace(fmt.Sprintf("%s.html", pkgType.Name), "/", ".", -1)
+			path := filepath.Join("/tmp/apidocs", name)
+			f, err := os.Create(path)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to create file %s", path)
+			}
+			defer f.Close()
+			if err := t.ExecuteTemplate(f, "type", pkgType); err != nil {
+				return errors.Wrap(err, "execute error")
+			}
+		}
+	}
 	return errors.Wrap(t.ExecuteTemplate(w, "packages", map[string]interface{}{
 		"packages":  pkgs,
 		"config":    config,
